@@ -1,5 +1,3 @@
-require 'spree/core/validators/email'
-
 module Spree
   class GiftCard < ActiveRecord::Base
     include CalculatedAdjustments
@@ -20,7 +18,7 @@ module Spree
     with_options allow_blank: true do
       validates :code, uniqueness: { case_sensitive: false }
       validates :current_value, numericality: { greater_than_or_equal_to: 0 }
-      validates :email, email: true
+      validates :email, length: { maximum: 254, allow_blank: false }, email: { allow_blank: false }
     end
 
     validate :amount_remaining_is_positive, if: :current_value
@@ -130,7 +128,7 @@ module Spree
       raise 'Cannot debit gift card by amount greater than current value.' if (amount_remaining - amount.to_f.abs) < 0
       transaction = self.transactions.build
       transaction.amount = amount
-      transaction.order  = order if order
+      transaction.order = order if order
       self.current_value = self.current_value - amount.abs
       self.save
     end
@@ -141,9 +139,9 @@ module Spree
 
     def order_activatable?(order)
       order &&
-      created_at < order.created_at &&
-      current_value > 0 &&
-      !UNACTIVATABLE_ORDER_STATES.include?(order.state)
+        created_at < order.created_at &&
+        current_value > 0 &&
+        !UNACTIVATABLE_ORDER_STATES.include?(order.state)
     end
 
     def calculator
@@ -183,13 +181,13 @@ module Spree
 
     def build_store_credit(user, previous_current_value)
       user.store_credits.build(
-            amount: previous_current_value,
-            category: Spree::StoreCreditCategory.gift_card.last,
-            memo: "Gift Card - #{ variant.product.name } received from #{ recieved_from }",
-            created_by: user,
-            action_originator: user,
-            currency: Spree::Config[:currency]
-        )
+        amount: previous_current_value,
+        category: Spree::StoreCreditCategory.gift_card.last,
+        memo: "Gift Card - #{ variant.product.name } received from #{ recieved_from }",
+        created_by: user,
+        action_originator: user,
+        currency: Spree::Config[:currency]
+      )
     end
 
     def recieved_from
